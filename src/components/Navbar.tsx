@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { MacDownloadLink } from './MacDownloadLink'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -48,13 +49,10 @@ export function Navbar() {
 
         {/* CTA */}
         <div className="hidden md:block">
-          <a
-            href="#download"
-            className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-hover hover:shadow-[0_0_64px_-8px_rgba(255,95,61,0.45)]"
-          >
+          <MacDownloadLink className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-hover hover:shadow-[0_0_64px_-8px_rgba(255,95,61,0.45)]">
             <AppleIcon className="h-4 w-4" />
             Download
-          </a>
+          </MacDownloadLink>
         </div>
 
         {/* Mobile hamburger */}
@@ -83,14 +81,13 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
-            <a
-              href="#download"
+            <MacDownloadLink
               onClick={() => setMobileOpen(false)}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-glow"
             >
               <AppleIcon className="h-4 w-4" />
               Download
-            </a>
+            </MacDownloadLink>
           </div>
         </div>
       )}
