@@ -100,12 +100,7 @@ export function Navbar() {
 
 function OctrixLogo({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 512 512" className={className} fill="none">
-      <circle cx="190" cy="290" r="140" stroke="#4fd1c5" strokeWidth="48" strokeLinecap="round" strokeDasharray="600 280" />
-      <circle cx="322" cy="222" r="140" stroke="#f9b233" strokeWidth="48" strokeLinecap="round" strokeDasharray="600 280" />
-      <circle cx="190" cy="290" r="28" fill="#4fd1c5" />
-      <circle cx="322" cy="222" r="28" fill="#f9b233" />
-    </svg>
+    <img src="/favicon.png" alt="Octrix" className={className} />
   )
 }
 
