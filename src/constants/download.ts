@@ -1,4 +1,6 @@
-/** Octrix macOS 安装包（GitHub Releases）— 更新版本时改此处即可 */
+export const OCTRIX_GITHUB_REPO = 'andforce/octrix'
+
+/** GitHub API 不可用时，退回到这组固定版本下载地址 */
 export const OCTRIX_RELEASE_VERSION = '1.0.1'
 
 const releaseBase = `https://github.com/andforce/octrix/releases/download/${OCTRIX_RELEASE_VERSION}`
