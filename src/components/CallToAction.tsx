@@ -1,9 +1,8 @@
-import { useLatestMacOsDmgs } from '../hooks/useLatestMacOsDmgs'
+import { OCTRIX_MACOS_DMGS } from '../constants/download'
 import { useScrollReveal } from '../hooks/useScrollReveal'
 
 export function CallToAction() {
   const { ref, isVisible } = useScrollReveal<HTMLElement>()
-  const dmgs = useLatestMacOsDmgs()
 
   return (
     <section id="download" ref={ref} className="relative py-32">
@@ -33,7 +32,7 @@ export function CallToAction() {
           <div className="mt-10 flex flex-col items-center gap-4">
             <div className="flex w-full max-w-xl flex-col gap-4 sm:flex-row sm:justify-center">
               <a
-                href={dmgs.appleSilicon}
+                href={OCTRIX_MACOS_DMGS.appleSilicon}
                 rel="noopener noreferrer"
                 className="group inline-flex flex-1 items-center justify-center gap-3 rounded-2xl bg-accent px-8 py-4 text-base font-semibold text-white shadow-glow transition-all hover:bg-accent-hover hover:shadow-[0_0_64px_-8px_rgba(255,95,61,0.5)] hover:scale-[1.02] active:scale-[0.98] sm:min-w-[200px]"
               >
@@ -43,7 +42,7 @@ export function CallToAction() {
                 Apple 芯片
               </a>
               <a
-                href={dmgs.intel}
+                href={OCTRIX_MACOS_DMGS.intel}
                 rel="noopener noreferrer"
                 className="inline-flex flex-1 items-center justify-center gap-3 rounded-2xl border border-border-strong bg-surface-elevated/80 px-8 py-4 text-base font-semibold text-content transition-all hover:border-content-subtle hover:bg-surface-hover hover:scale-[1.02] active:scale-[0.98] sm:min-w-[200px]"
               >

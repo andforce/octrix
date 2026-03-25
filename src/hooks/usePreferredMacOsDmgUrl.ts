@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLatestMacOsDmgs } from './useLatestMacOsDmgs'
+import { OCTRIX_MACOS_DMGS } from '../constants/download'
 
 function initialPreferredUrl(appleSiliconUrl: string, intelUrl: string): string {
   if (typeof navigator === 'undefined') {
@@ -20,15 +20,14 @@ function initialPreferredUrl(appleSiliconUrl: string, intelUrl: string): string 
  * 优先 Apple Silicon DMG；可结合 UA 与 Client Hints 在客户端修正（例如 Safari 在部分 Apple 芯片机型上 UA 仍写 Intel）。
  */
 export function usePreferredMacOsDmgUrl(): string {
-  const dmgs = useLatestMacOsDmgs()
-  const [url, setUrl] = useState(() => initialPreferredUrl(dmgs.appleSilicon, dmgs.intel))
+  const [url, setUrl] = useState(() => initialPreferredUrl(OCTRIX_MACOS_DMGS.appleSilicon, OCTRIX_MACOS_DMGS.intel))
 
   useEffect(() => {
-    setUrl(initialPreferredUrl(dmgs.appleSilicon, dmgs.intel))
+    setUrl(initialPreferredUrl(OCTRIX_MACOS_DMGS.appleSilicon, OCTRIX_MACOS_DMGS.intel))
 
     const ua = navigator.userAgent
     if (/arm64|aarch64/i.test(ua)) {
-      setUrl(dmgs.appleSilicon)
+      setUrl(OCTRIX_MACOS_DMGS.appleSilicon)
       return
     }
 
@@ -40,14 +39,14 @@ export function usePreferredMacOsDmgUrl(): string {
         .then((values) => {
           const arch = values.architecture?.toLowerCase()
           if (arch === 'arm' || arch === 'aarch64') {
-            setUrl(dmgs.appleSilicon)
+            setUrl(OCTRIX_MACOS_DMGS.appleSilicon)
           } else if (arch === 'x86' || arch === 'x86-64' || arch === 'amd64') {
-            setUrl(dmgs.intel)
+            setUrl(OCTRIX_MACOS_DMGS.intel)
           }
         })
         .catch(() => {})
     }
-  }, [dmgs.appleSilicon, dmgs.intel])
+  }, [])
 
   return url
 }
