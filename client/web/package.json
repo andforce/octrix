@@ -1,0 +1,132 @@
+{
+  "name": "cli-bridge-web",
+  "version": "1.0.0",
+  "description": "Octrix desktop client",
+  "author": "OctrixAI",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "predev": "CLI_BRIDGE_PORT=9800 node scripts/kill-port.mjs",
+    "dev": "CLI_BRIDGE_PORT=9800 concurrently \"npm run dev:server\" \"npm run dev:client:wait\"",
+    "dev:client:wait": "node scripts/wait-for-port.mjs && npm run dev:client",
+    "dev:server": "tsx watch server/index.ts",
+    "dev:client": "vite",
+    "build": "tsc -b && vite build",
+    "build:server": "node scripts/build-server.mjs",
+    "build:runtime": "node scripts/prepare-bundled-node.mjs",
+    "build:host:artifacts": "npm run build && npm run build:server && npm run build:runtime",
+    "build:host": "npm run build:host:artifacts && node scripts/build-host-package.mjs",
+    "build:tauri": "npm run build && npm run build:server && npm run build:runtime",
+    "test": "vitest run",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "env -u CARGO_TARGET_DIR -u CI tauri build",
+    "tauri:build:dmg:arm64": "env -u CARGO_TARGET_DIR -u CI tauri build --target aarch64-apple-darwin && bash src-tauri/scripts/rename-dmg.sh",
+    "tauri:build:dmg:x64": "env -u CARGO_TARGET_DIR -u CI tauri build --target x86_64-apple-darwin && bash src-tauri/scripts/rename-dmg.sh",
+    "tauri:build:universal": "env -u CARGO_TARGET_DIR -u CI tauri build --target aarch64-apple-darwin && env -u CARGO_TARGET_DIR -u CI tauri build --target x86_64-apple-darwin && bash src-tauri/scripts/rename-dmg.sh",
+    "electron:dev": "concurrently \"npm run dev\" \"npm run electron:run:dev\"",
+    "electron:run:dev": "wait-on tcp:5173 tcp:9800 && electron .",
+    "electron:prep": "npm run build && npm run build:server && npm run build:runtime",
+    "electron:build:dmg:arm64": "TAURI_ENV_TARGET_TRIPLE=aarch64-apple-darwin npm run electron:prep && electron-builder --mac dmg --arm64",
+    "electron:build:dmg:x64": "TAURI_ENV_TARGET_TRIPLE=x86_64-apple-darwin npm run electron:prep && electron-builder --mac dmg --x64",
+    "electron:build:dmg:universal": "TAURI_ENV_TARGET_TRIPLE=universal-apple-darwin npm run electron:prep && electron-builder --mac dmg --universal"
+  },
+  "dependencies": {
+    "@chenglou/pretext": "^0.0.8",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/headless": "^6.0.0",
+    "@xterm/xterm": "^6.0.0",
+    "express": "^5.1.0",
+    "multer": "^2.2.0",
+    "node-addon-api": "^8.9.0",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "uuid": "^11.1.1",
+    "ws": "^8.21.0",
+    "yaml": "^2.9.0"
+  },
+  "overrides": {
+    "body-parser": "2.3.0",
+    "qs": "6.16.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/supertest": "^7.2.0",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^6.0.3",
+    "autoprefixer": "^10.5.2",
+    "concurrently": "^10.0.3",
+    "electron": "^43.0.0",
+    "electron-builder": "^27.0.0-alpha.5",
+    "esbuild": "^0.28.1",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.5.16",
+    "source-map": "^0.7.6",
+    "supertest": "^7.2.2",
+    "tailwindcss": "^3.4.17",
+    "terser": "^5.48.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.3",
+    "vitest": "^4.1.10",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "com.octrix.desktop",
+    "productName": "Octrix",
+    "artifactName": "Octrix-${arch}.${ext}",
+    "directories": {
+      "output": "out-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "dist"
+      },
+      {
+        "from": "dist-server",
+        "to": "dist-server",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "dist-runtime",
+        "to": "dist-runtime"
+      },
+      {
+        "from": "host",
+        "to": "host"
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "src-tauri/icons/icon.icns",
+      "sign": {
+        "hardenedRuntime": false
+      }
+    }
+  }
+}

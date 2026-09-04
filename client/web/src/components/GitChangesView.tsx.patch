@@ -1,0 +1,151 @@
+--- client/web/src/components/GitChangesView.tsx
++++ client/web/src/components/GitChangesView.tsx
+@@ -10,6 +10,7 @@
+   bottomInset?: number;
+   onBack: () => void;
+ }
+ 
+ interface DiffRow {
+   key: string;
+@@ -18,6 +19,7 @@
+   leftText: string;
+   rightText: string;
+   leftType: 'context' | 'remove' | 'empty';
+   rightType: 'context' | 'add' | 'empty';
++  blockId: string | null;
+ }
+ 
+@@ -133,6 +135,7 @@
+       rightText: text,
+       leftType: 'context',
+       rightType: 'context',
++      blockId: null,
+     });
+     leftLine += 1;
+     rightLine += 1;
+@@ -152,6 +155,7 @@
+         rightText,
+         leftType: hasLeft ? 'remove' : 'empty',
+         rightType: hasRight ? 'add' : 'empty',
++        blockId: blockKey,
+       });
+       if (hasLeft) leftLine += 1;
+       if (hasRight) rightLine += 1;
+@@ -219,6 +223,7 @@
+   const [diffLoading, setDiffLoading] = useState(false);
+   const [diffError, setDiffError] = useState('');
+   const [actionKey, setActionKey] = useState<string | null>(null);
++  const [revertingBlock, setRevertingBlock] = useState<string | null>(null);
+ 
+   const refreshStatus = useCallback(async () => {
+     setStatusLoading(true);
+@@ -325,6 +330,42 @@
+     }
+   }, [groupId, refreshStatus]);
+ 
++  const handleRevertBlock = useCallback(async (blockId: string) => {
++    if (!diff || !selectedEntry || !workingDirectory) return;
++    setRevertingBlock(blockId);
++    try {
++      const newLines: string[] = [];
++      for (const row of rows) {
++        if (row.blockId === blockId) {
++          if (row.leftType !== 'empty') {
++            newLines.push(row.leftText);
++          }
++        } else {
++          if (row.rightType === 'context' || row.rightType === 'add') {
++            newLines.push(row.rightText);
++          }
++        }
++      }
++      let newText = newLines.join('\n');
++      if (diff.after.text.endsWith('\n') && !newText.endsWith('\n')) {
++        newText += '\n';
++      }
++      if (diff.after.text.includes('\r\n')) {
++        newText = newText.replace(/\n/g, '\r\n');
++      }
++
++      await api.writeFile(groupId, selectedEntry.path, newText);
++      
++      const result = await api.getGitDiff(groupId, selectedEntry.path, selectedEntry.section, selectedEntry.kind);
++      setDiff(result);
++      await refreshStatus();
++    } catch (error) {
++      setDiffError(error instanceof Error ? error.message : String(error));
++    } finally {
++      setRevertingBlock(null);
++    }
++  }, [diff, rows, selectedEntry, workingDirectory, groupId, refreshStatus]);
++
+   const rows = useMemo(
+     () => diff && !diff.isBinary ? buildDiffRows(diff.before.text, diff.after.text) : [],
+     [diff],
+@@ -494,10 +535,10 @@
+               </div>
+             ) : (
+               <div className="overflow-hidden rounded-2xl border border-border-strong bg-[#0b0f15] shadow-[0_18px_48px_rgba(0,0,0,0.28)]">
+-                <div className="grid grid-cols-[minmax(0,1fr)_44px_44px_minmax(0,1fr)] border-b border-border-strong text-xs text-content-subtle">
++                <div className="grid grid-cols-[minmax(0,1fr)_44px_28px_44px_minmax(0,1fr)] border-b border-border-strong text-xs text-content-subtle">
+                   <div className="px-4 py-2">{diff?.beforeLabel || 'Before'}</div>
+-                  <div className="col-span-2 bg-white/[0.02]" />
++                  <div className="col-span-3 bg-white/[0.02]" />
+                   <div className="px-4 py-2">{diff?.afterLabel || 'After'}</div>
+                 </div>
+ 
+@@ -506,20 +547,38 @@
+                   </div>
+                 ) : (
+                   <div className="font-mono text-[12px] leading-[24px]">
+-                    {rows.map(row => (
+-                      <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_44px_44px_minmax(0,1fr)] hover:bg-white/[0.02]">
+-                        <div className={`overflow-hidden px-4 whitespace-pre ${getPalette(row.leftType)}`}>
+-                          {row.leftText || ' '}
+-                        </div>
+-                        <div className={`pr-3 pl-1 text-right select-none border-r border-white/[0.04] ${getGutterPalette(row.leftType)}`}>
+-                          {row.leftNumber ?? ''}
+-                        </div>
+-                        <div className={`pr-3 pl-1 text-right select-none ${getGutterPalette(row.rightType)}`}>
+-                          {row.rightNumber ?? ''}
+-                        </div>
+-                        <div className={`overflow-hidden px-4 whitespace-pre ${getPalette(row.rightType)}`}>
+-                          {row.rightText || ' '}
+-                        </div>
+-                      </div>
+-                    ))}
++                    {rows.map((row, index) => {
++                      const isFirstInBlock = row.blockId && (index === 0 || rows[index - 1].blockId !== row.blockId);
++                      const canRevert = selectedEntry.section === 'unstaged';
++                      return (
++                        <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_44px_28px_44px_minmax(0,1fr)] hover:bg-white/[0.02]">
++                          <div className={`overflow-hidden px-4 whitespace-pre ${getPalette(row.leftType)}`}>
++                            {row.leftText || ' '}
++                          </div>
++                          <div className={`pr-3 pl-1 text-right select-none border-r border-white/[0.04] ${getGutterPalette(row.leftType)}`}>
++                            {row.leftNumber ?? ''}
++                          </div>
++                          <div className={`flex items-center justify-center border-r border-white/[0.04] bg-white/[0.02] ${row.blockId ? 'bg-white/[0.04]' : ''}`}>
++                            {isFirstInBlock && canRevert && (
++                              <button
++                                type="button"
++                                onClick={() => handleRevertBlock(row.blockId!)}
++                                disabled={revertingBlock === row.blockId}
++                                className="text-content-subtle hover:text-accent transition disabled:opacity-50"
++                                title="撤销此更改"
++                              >
++                                {revertingBlock === row.blockId ? '...' : (
++                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/></svg>
++                                )}
++                              </button>
++                            )}
++                          </div>
++                          <div className={`pr-3 pl-1 text-right select-none ${getGutterPalette(row.rightType)}`}>
++                            {row.rightNumber ?? ''}
++                          </div>
++                          <div className={`overflow-hidden px-4 whitespace-pre ${getPalette(row.rightType)}`}>
++                            {row.rightText || ' '}
++                          </div>
++                        </div>
++                      );
++                    })}

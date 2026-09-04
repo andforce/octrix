@@ -1,0 +1,9 @@
+[Unit]
+Description=Octrix Cloud SQLite backup
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/octrix/deploy/backup.sh
+User=root
+UMask=0077

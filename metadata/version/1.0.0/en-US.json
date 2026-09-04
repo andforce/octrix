@@ -1,0 +1,7 @@
+{
+  "description": "Octrix lets you securely access the AI coding agents running on your own Mac from your iPhone. Install Octrix Host on your Mac, sign in with the same Octrix account, and continue conversations and tasks while your Mac stays in the background.\n\nWith Octrix, you can:\n\n• Connect to an authorized Mac through Octrix Cloud\n• View and continue AI conversations from your iPhone\n• Work with supported AI coding agents\n• Manage individual chats and multi-agent collaboration groups\n• Use voice input to draft messages\n• Review task status and outputs remotely\n\nYour Mac remains the process owner and does not need an inbound public port. Octrix requires a Mac running Octrix Host and a supported AI CLI.",
+  "keywords": "AI,coding,developer,remote,Mac,assistant,agents,terminal,workflow,productivity",
+  "marketingUrl": "https://octrix.work",
+  "promotionalText": "Bring the AI coding agents on your Mac to your iPhone.",
+  "supportUrl": "https://octrix.work/support"
+}

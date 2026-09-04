@@ -1,0 +1,34 @@
+name: octrix
+
+services:
+  octrix-cloud:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: octrix-cloud:latest
+    container_name: octrix-cloud
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: true
+      - path: legacy-relay.env
+        required: false
+    environment:
+      RELAY_HOST: 0.0.0.0
+      RELAY_PORT: 8790
+      OCTRIX_DATABASE_URL: sqlite:////data/octrix.sqlite3
+    ports:
+      - 127.0.0.1:18083:8790
+    volumes:
+      - ./data:/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8790/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

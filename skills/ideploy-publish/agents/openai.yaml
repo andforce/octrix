@@ -1,0 +1,4 @@
+interface:
+  display_name: "iDeploy Publish"
+  short_description: "Build and publish an iOS app to iDeploy"
+  default_prompt: "Use $ideploy-publish to build and publish the current iOS project to my registered iPhone."

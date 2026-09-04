@@ -1,0 +1,332 @@
+require "fileutils"
+require "json"
+require "shellwords"
+require "tmpdir"
+
+default_platform(:mac)
+
+def project_root
+  File.expand_path("..", __dir__)
+end
+
+def blank?(value)
+  value.to_s.strip.empty?
+end
+
+def require_env!(key)
+  value = ENV[key]
+  UI.user_error!("Missing required env var: #{key}") if blank?(value)
+  value
+end
+
+def present_envs?(*keys)
+  keys.all? { |key| !blank?(ENV[key]) }
+end
+
+def arch_name_for(target)
+  case target
+  when "aarch64-apple-darwin"
+    "arm64"
+  when "x86_64-apple-darwin"
+    "x64"
+  when "universal-apple-darwin"
+    "universal"
+  else
+    UI.user_error!("Unsupported target: #{target}")
+  end
+end
+
+def parse_targets(options)
+  raw_targets = options[:targets] || ENV["TAURI_TARGETS"] || options[:target] || ENV["TAURI_TARGET"]
+  raw_targets = "aarch64-apple-darwin,x86_64-apple-darwin" if raw_targets.to_s.strip.empty?
+
+  raw_targets
+    .split(",")
+    .map(&:strip)
+    .reject(&:empty?)
+    .uniq
+end
+
+def bundle_app_path(root, target, product_name)
+  File.join(root, "src-tauri", "target", target, "release", "bundle", "macos", "#{product_name}.app")
+end
+
+def release_dmg_path(root, product_name, arch_name)
+  File.join(root, "release-dmg", "#{product_name}-#{arch_name}.dmg")
+end
+
+def include_applications_link?(options)
+  raw = options[:include_applications_link]
+  return true if raw.nil?
+
+  raw.to_s.strip.downcase != "false"
+end
+
+def shellescape(value)
+  Shellwords.escape(value)
+end
+
+def resolve_asc_config_path(root)
+  explicit = ENV["ASC_CONFIG_PATH"]
+  return [File.expand_path(explicit, root), true] unless blank?(explicit)
+
+  [File.join(Dir.home, ".appstoreconnect", "config.json"), false]
+end
+
+def load_asc_notary_credentials(root)
+  config_path, explicit = resolve_asc_config_path(root)
+  return nil if blank?(config_path)
+
+  unless File.file?(config_path)
+    UI.user_error!("ASC config not found: #{config_path}") if explicit
+    return nil
+  end
+
+  config = JSON.parse(File.read(config_path))
+  key_id = config["key_id"].to_s.strip
+  issuer_id = config["issuer_id"].to_s.strip
+  private_key_path = config["private_key_path"].to_s.strip
+
+  missing = []
+  missing << "key_id" if blank?(key_id)
+  missing << "issuer_id" if blank?(issuer_id)
+  missing << "private_key_path" if blank?(private_key_path)
+  unless missing.empty?
+    message = "ASC config #{config_path} missing: #{missing.join(", ")}"
+    explicit ? UI.user_error!(message) : UI.important(message)
+    return nil
+  end
+
+  private_key_path = File.expand_path(private_key_path, File.dirname(config_path))
+  unless File.file?(private_key_path)
+    message = "ASC private key not found: #{private_key_path}"
+    explicit ? UI.user_error!(message) : UI.important(message)
+    return nil
+  end
+
+  {
+    mode: :asc_api_key,
+    config_path: config_path,
+    key_id: key_id,
+    issuer_id: issuer_id,
+    private_key_path: private_key_path
+  }
+rescue JSON::ParserError => e
+  message = "Invalid ASC config JSON: #{config_path}: #{e.message}"
+  explicit ? UI.user_error!(message) : UI.important(message)
+  nil
+end
+
+def resolve_notary_credentials(root)
+  asc_credentials = load_asc_notary_credentials(root)
+  if asc_credentials
+    UI.message("Using App Store Connect API key from #{asc_credentials[:config_path]}")
+    return asc_credentials
+  end
+
+  if present_envs?("APPLE_ID", "APPLE_TEAM_ID", "APPLE_APP_SPECIFIC_PASSWORD")
+    UI.message("Using Apple ID notarization credentials from environment")
+    return {
+      mode: :apple_id,
+      apple_id: ENV["APPLE_ID"],
+      apple_team_id: ENV["APPLE_TEAM_ID"],
+      apple_password: ENV["APPLE_APP_SPECIFIC_PASSWORD"]
+    }
+  end
+
+  UI.user_error!(
+    "Missing notarization credentials. Configure ~/.appstoreconnect/config.json " \
+    "(key_id, issuer_id, private_key_path), set ASC_CONFIG_PATH, or set APPLE_ID, APPLE_TEAM_ID, APPLE_APP_SPECIFIC_PASSWORD."
+  )
+end
+
+def notarytool_auth(credentials)
+  case credentials[:mode]
+  when :asc_api_key
+    [
+      {
+        "ASC_KEY_PATH" => credentials[:private_key_path],
+        "ASC_KEY_ID" => credentials[:key_id],
+        "ASC_ISSUER_ID" => credentials[:issuer_id]
+      },
+      "--key \"$ASC_KEY_PATH\" --key-id \"$ASC_KEY_ID\" --issuer \"$ASC_ISSUER_ID\""
+    ]
+  when :apple_id
+    [
+      {
+        "FL_NOTARY_APPLE_ID" => credentials[:apple_id],
+        "FL_NOTARY_TEAM_ID" => credentials[:apple_team_id],
+        "FL_NOTARY_PASSWORD" => credentials[:apple_password]
+      },
+      "--apple-id \"$FL_NOTARY_APPLE_ID\" --team-id \"$FL_NOTARY_TEAM_ID\" --password \"$FL_NOTARY_PASSWORD\""
+    ]
+  else
+    UI.user_error!("Unsupported notarization credential mode: #{credentials[:mode]}")
+  end
+end
+
+def macho_file?(path)
+  return false unless File.file?(path)
+  return false if File.symlink?(path)
+
+  output = IO.popen(["file", "-b", path], &:read).to_s
+  output.include?("Mach-O")
+rescue StandardError
+  false
+end
+
+def node_entitlements_path
+  File.join(File.expand_path("..", __dir__), "src-tauri", "node.entitlements")
+end
+
+def needs_jit_entitlements?(path)
+  basename = File.basename(path)
+  basename == "node" || basename == "spawn-helper"
+end
+
+def sign_binary!(path, signing_identity, entitlements: nil)
+  cmd = "codesign --force --options runtime --timestamp"
+  cmd += " --entitlements #{shellescape(entitlements)}" if entitlements
+  cmd += " --sign #{shellescape(signing_identity)} #{shellescape(path)}"
+  sh(cmd)
+end
+
+def sign_nested_binaries!(app_path, signing_identity)
+  entitlements = node_entitlements_path
+  Dir.glob(File.join(app_path, "**", "*"), File::FNM_DOTMATCH)
+    .sort
+    .each do |path|
+      next unless macho_file?(path)
+
+      if needs_jit_entitlements?(path)
+        sign_binary!(path, signing_identity, entitlements: entitlements)
+      else
+        sign_binary!(path, signing_identity)
+      end
+    end
+end
+
+def notarize_dmg!(dmg_path, credentials)
+  env, auth_args = notarytool_auth(credentials)
+
+  submit_output = sh(
+    env,
+    "xcrun notarytool submit #{shellescape(dmg_path)} " \
+    "#{auth_args} " \
+    "--wait --output-format json",
+    log: false
+  )
+
+  result = JSON.parse(submit_output)
+  return if result["status"] == "Accepted"
+
+  submission_id = result["id"] || result["jobId"]
+  UI.error("Notarization failed for #{dmg_path} with status: #{result["status"]}")
+
+  if submission_id
+    log_output = sh(
+      env,
+      "xcrun notarytool log #{shellescape(submission_id)} " \
+      "#{auth_args}",
+      log: false
+    )
+    UI.error(log_output)
+  end
+
+  UI.user_error!("Notarization failed for #{dmg_path}")
+end
+
+def check_gatekeeper!(artifact_path)
+  sh("spctl -a -t open -vv #{shellescape(artifact_path)}")
+rescue StandardError => e
+  UI.important("Gatekeeper check returned non-zero for #{artifact_path}: #{e.message}")
+end
+
+platform :mac do
+  desc "Build, sign, notarize, and staple a Tauri DMG"
+  lane :release do |options|
+    root = project_root
+    targets = parse_targets(options)
+    product_name = (options[:product_name] || ENV["TAURI_PRODUCT_NAME"] || "Octrix").strip
+    signing_identity = require_env!("MAC_SIGNING_IDENTITY")
+    notary_credentials = resolve_notary_credentials(root)
+    FileUtils.mkdir_p(File.join(root, "release-dmg"))
+
+    targets.each do |target|
+      arch_name = arch_name_for(target)
+      app_path = bundle_app_path(root, target, product_name)
+      dmg_path = release_dmg_path(root, product_name, arch_name)
+
+      Dir.chdir(root) do
+        sh("env -u CARGO_TARGET_DIR -u CI npx tauri build --bundles app --target #{shellescape(target)}")
+      end
+
+      UI.user_error!("App bundle not found: #{app_path}") unless File.exist?(app_path)
+
+      sign_nested_binaries!(app_path, signing_identity)
+      sh(
+        "codesign --force --deep --options runtime --timestamp " \
+        "--sign #{shellescape(signing_identity)} #{shellescape(app_path)}"
+      )
+      sh("codesign --verify --deep --strict --verbose=2 #{shellescape(app_path)}")
+
+      FileUtils.rm_f(dmg_path)
+
+      include_apps_link = include_applications_link?(options)
+      if include_apps_link
+        staging_dir = Dir.mktmpdir("dmg-stage-")
+        begin
+          staged_app_path = File.join(staging_dir, File.basename(app_path))
+          FileUtils.cp_r(app_path, staged_app_path, preserve: true)
+          FileUtils.ln_sf("/Applications", File.join(staging_dir, "Applications"))
+
+          sh(
+            "hdiutil create -volname #{shellescape(product_name)} " \
+            "-srcfolder #{shellescape(staging_dir)} -ov -format UDZO #{shellescape(dmg_path)}"
+          )
+        ensure
+          FileUtils.remove_entry(staging_dir) if staging_dir && Dir.exist?(staging_dir)
+        end
+      else
+        sh(
+          "hdiutil create -volname #{shellescape(product_name)} " \
+          "-srcfolder #{shellescape(app_path)} -ov -format UDZO #{shellescape(dmg_path)}"
+        )
+      end
+
+      sh(
+        "codesign --force --timestamp " \
+        "--sign #{shellescape(signing_identity)} #{shellescape(dmg_path)}"
+      )
+      sh("codesign --verify --verbose=2 #{shellescape(dmg_path)}")
+
+      notarize_dmg!(dmg_path, notary_credentials)
+
+      sh("xcrun stapler staple #{shellescape(dmg_path)}")
+      sh("xcrun stapler validate #{shellescape(dmg_path)}")
+      check_gatekeeper!(dmg_path)
+
+      UI.success("Release DMG is ready: #{dmg_path}")
+    end
+  end
+
+  desc "Notarize and staple an existing DMG"
+  lane :notarize_dmg do |options|
+    dmg_path = options[:dmg] || ENV["DMG_PATH"]
+    UI.user_error!("Pass dmg:/absolute/path/to/file.dmg or set DMG_PATH") if dmg_path.to_s.strip.empty?
+
+    notary_credentials = resolve_notary_credentials(project_root)
+    env, auth_args = notarytool_auth(notary_credentials)
+
+    sh(
+      env,
+      "xcrun notarytool submit #{shellescape(dmg_path)} " \
+      "#{auth_args} " \
+      "--wait"
+    )
+
+    sh("xcrun stapler staple #{shellescape(dmg_path)}")
+    sh("xcrun stapler validate #{shellescape(dmg_path)}")
+    check_gatekeeper!(dmg_path)
+  end
+end

@@ -1,0 +1,9 @@
+[xcode]
+project = "OctrixMobile.xcodeproj"
+scheme = "OctrixMobile"
+configuration = "Release"
+team_id = "RH9H7T7RBU"
+signing_style = "manual"
+provisioning_profile = "Octrix iDeploy AdHoc Login 2026.07.15"
+signing_certificate = "41D9B90190E95D790CB5664FE0CD186EA3769D7F"
+export_method = "release-testing"

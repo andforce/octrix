@@ -1,0 +1,326 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+host_label="${OCTRIX_HOST_LABEL:-work.octrix.host}"
+host_port="${OCTRIX_LOCAL_PORT:-39800}"
+host_root="${OCTRIX_HOST_HOME:-$HOME/.local/share/octrix-host/current}"
+host_base="${OCTRIX_HOST_BASE_DIR:-$HOME/.local/share/octrix-host}"
+plist_path="${OCTRIX_HOST_PLIST:-$HOME/Library/LaunchAgents/$host_label.plist}"
+log_dir="${OCTRIX_HOST_LOG_DIR:-$HOME/Library/Logs/Octrix}"
+permission_marker="$host_base/.protected-folders-authorized-v1"
+curl_bin="${OCTRIX_CURL:-/usr/bin/curl}"
+launchctl_bin="${OCTRIX_LAUNCHCTL:-/bin/launchctl}"
+open_bin="${OCTRIX_OPEN:-/usr/bin/open}"
+gui_domain="gui/$(id -u)"
+base_url="http://127.0.0.1:$host_port"
+
+field() {
+  printf '%s' "$1" | /usr/bin/plutil -extract "$2" raw -o - - 2>/dev/null || true
+}
+
+healthy_at() {
+  "$curl_bin" -fsS "$1/v1/health" >/dev/null 2>&1
+}
+
+valid_cloud_url() {
+  local value="$1"
+  [[ "$value" =~ ^https://[^[:space:]/]+([/:?].*)?$ ]] \
+    || [[ "$value" =~ ^http://(localhost|127\.0\.0\.1|\[::1\])([/:?].*)?$ ]]
+}
+
+resolve_running_url() {
+  if [[ -n "${OCTRIX_LOCAL_PORT:-}" ]] && healthy_at "$base_url"; then return 0; fi
+  if healthy_at 'http://127.0.0.1:39800'; then
+    base_url='http://127.0.0.1:39800'
+    return 0
+  fi
+  # 尚未安装正式 Host 时，保留对旧开发服务的 CLI 兼容；安装后绝不让 9800
+  # 冒充 Host，否则 `octrix start` 会跳过 work.octrix.host LaunchAgent。
+  if [[ ! -f "$plist_path" ]] && healthy_at 'http://127.0.0.1:9800'; then
+    base_url='http://127.0.0.1:9800'
+    return 0
+  fi
+  return 1
+}
+
+wait_for_health() {
+  local attempts interval attempt=0
+  attempts="${OCTRIX_START_WAIT_ATTEMPTS:-60}"
+  interval="${OCTRIX_START_WAIT_INTERVAL:-0.5}"
+  while (( attempt < attempts )); do
+    healthy_at "$base_url" && return 0
+    sleep "$interval"
+    ((attempt += 1))
+  done
+  return 1
+}
+
+require_host_files() {
+  for file in "$host_root/runtime/node" "$host_root/server/index.mjs" "$host_root/bin/octrix"; do
+    if [[ ! -e "$file" ]]; then
+      echo "Octrix Host 文件不完整：$file" >&2
+      echo "请重新运行 Octrix Host 安装命令。" >&2
+      exit 1
+    fi
+  done
+}
+
+install_service() {
+  require_host_files
+  mkdir -p "$(dirname "$plist_path")" "$log_dir"
+  local temporary="$plist_path.tmp.$$"
+  local runtime_path="$host_root/runtime/node"
+  local server_path="$host_root/server/index.mjs"
+  local static_path="$host_root/web"
+  local modules_path="$host_root/server/node_modules"
+  local cli_path="$host_root/bin/octrix"
+  local service_path="$host_root/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  local cloud_url="${OCTRIX_CLOUD_URL:-}"
+  if [[ -z "$cloud_url" && -f "$plist_path" ]]; then
+    cloud_url="$(/usr/bin/plutil -extract EnvironmentVariables.OCTRIX_CLOUD_URL raw -o - "$plist_path" 2>/dev/null || true)"
+  fi
+  if [[ -n "$cloud_url" ]] && ! valid_cloud_url "$cloud_url"; then
+    echo "OCTRIX_CLOUD_URL 必须使用 HTTPS（仅本机回环调试可使用 HTTP）。" >&2
+    exit 2
+  fi
+  /usr/bin/plutil -create xml1 "$temporary"
+  /usr/bin/plutil -insert Label -string "$host_label" "$temporary"
+  /usr/bin/plutil -insert ProgramArguments -json "[\"$runtime_path\",\"$server_path\"]" "$temporary"
+  /usr/bin/plutil -insert WorkingDirectory -string "$HOME" "$temporary"
+  /usr/bin/plutil -insert RunAtLoad -bool true "$temporary"
+  /usr/bin/plutil -insert KeepAlive -bool true "$temporary"
+  /usr/bin/plutil -insert ProcessType -string Interactive "$temporary"
+  /usr/bin/plutil -insert StandardOutPath -string "$log_dir/host.log" "$temporary"
+  /usr/bin/plutil -insert StandardErrorPath -string "$log_dir/host.log" "$temporary"
+  /usr/bin/plutil -insert EnvironmentVariables -json "{}" "$temporary"
+  /usr/bin/plutil -insert EnvironmentVariables.CLI_BRIDGE_PORT -string "$host_port" "$temporary"
+  /usr/bin/plutil -insert EnvironmentVariables.CLI_BRIDGE_NODE -string "$runtime_path" "$temporary"
+  /usr/bin/plutil -insert EnvironmentVariables.STATIC_DIR -string "$static_path" "$temporary"
+  /usr/bin/plutil -insert EnvironmentVariables.NODE_PATH -string "$modules_path" "$temporary"
+  /usr/bin/plutil -insert EnvironmentVariables.OCTRIX_CLI_SOURCE -string "$cli_path" "$temporary"
+  /usr/bin/plutil -insert EnvironmentVariables.PATH -string "$service_path" "$temporary"
+  if [[ -n "$cloud_url" ]]; then
+    /usr/bin/plutil -insert EnvironmentVariables.OCTRIX_CLOUD_URL -string "$cloud_url" "$temporary"
+  fi
+  mv "$temporary" "$plist_path"
+  chmod 0644 "$plist_path"
+  "$launchctl_bin" bootout "$gui_domain" "$plist_path" >/dev/null 2>&1 || true
+  "$launchctl_bin" bootstrap "$gui_domain" "$plist_path" >/dev/null
+  echo "Octrix Host 已注册为登录后自动运行。"
+}
+
+activate_service() {
+  local action="$1"
+  base_url="http://127.0.0.1:$host_port"
+  "$launchctl_bin" bootstrap "$gui_domain" "$plist_path" >/dev/null 2>&1 || true
+  "$launchctl_bin" kickstart -k "$gui_domain/$host_label" >/dev/null
+  if ! wait_for_health; then
+    echo "Octrix Host ${action}失败，请查看：$log_dir/host.log" >&2
+    exit 1
+  fi
+  echo "Octrix Host 已${action}：$base_url"
+}
+
+start_host() {
+  if resolve_running_url; then
+    echo "Octrix Host 已在运行：$base_url"
+    return
+  fi
+  if [[ ! -f "$plist_path" ]]; then
+    echo "Octrix Host 尚未安装。请先运行安装命令。" >&2
+    exit 1
+  fi
+  activate_service '启动'
+}
+
+stop_host() {
+  "$launchctl_bin" bootout "$gui_domain" "$plist_path" >/dev/null 2>&1 || true
+  echo "Octrix Host 已停止。"
+}
+
+restart_host() {
+  "$launchctl_bin" bootout "$gui_domain" "$plist_path" >/dev/null 2>&1 || true
+  activate_service '重启'
+}
+
+ensure_running() {
+  resolve_running_url && return
+  start_host >/dev/null
+  resolve_running_url && return
+  echo "Octrix Host 尚未启动。" >&2
+  exit 1
+}
+
+status_json() {
+  "$curl_bin" -fsS "$base_url/api/relay/status"
+}
+
+print_status_json() {
+  local json="$1" state account connected url
+  state="$(field "$json" authorizationState)"
+  account="$(field "$json" accountLabel)"
+  connected="$(field "$json" connected)"
+  url="$(field "$json" url)"
+  echo "Host：运行中（${base_url}）"
+  case "$state" in
+    authorized) echo "账号：已登录${account:+：$account}" ;;
+    pending) echo "账号：正在等待网页授权" ;;
+    *) echo "账号：尚未登录" ;;
+  esac
+  echo "云端：$url"
+  echo "连接：$([[ "$connected" == "true" ]] && echo 在线 || echo 离线)"
+}
+
+wait_for_connection() {
+  local json="$1" state connected error attempt=0
+  local attempts="${OCTRIX_CONNECT_WAIT_ATTEMPTS:-30}"
+  local interval="${OCTRIX_CONNECT_WAIT_INTERVAL:-0.5}"
+  while (( attempt < attempts )); do
+    connected="$(field "$json" connected)"
+    [[ "$connected" == "true" ]] && break
+    sleep "$interval"
+    json="$(status_json)"
+    state="$(field "$json" authorizationState)"
+    error="$(field "$json" lastError)"
+    if [[ "$state" == "signed_out" && -n "$error" ]]; then echo "$error" >&2; exit 1; fi
+    ((attempt += 1))
+  done
+  print_status_json "$json"
+}
+
+login() {
+  local mode=browser response state code uri error
+  local authorization_interval="${OCTRIX_AUTH_WAIT_INTERVAL:-2}"
+  [[ "${1:-}" == "--device-code" ]] && mode=device_code
+  response="$(/usr/bin/printf '{"mode":"%s"}' "$mode" | "$curl_bin" -fsS -X POST "$base_url/api/relay/auth/start" -H 'content-type: application/json' --data-binary @-)"
+  code="$(field "$response" userCode)"
+  uri="$(field "$response" verificationUri)"
+  if [[ "$mode" == "device_code" ]]; then
+    echo "请在浏览器打开：$uri"
+    echo "输入授权码：$code"
+  else
+    echo "浏览器已打开，请确认这台 Mac 的授权。"
+  fi
+  while true; do
+    sleep "$authorization_interval"
+    response="$(status_json)"
+    state="$(field "$response" authorizationState)"
+    error="$(field "$response" lastError)"
+    if [[ "$state" == "authorized" ]]; then wait_for_connection "$response"; return; fi
+    if [[ "$state" == "signed_out" && -n "$error" ]]; then echo "$error" >&2; exit 1; fi
+  done
+}
+
+request_file_permissions() {
+  ensure_running
+  echo
+  echo "为了让 iPhone 能远程选择工作目录，Octrix 需要访问桌面、文稿和下载文件夹。"
+  echo "接下来 macOS 会分别显示系统权限弹窗；请在每个弹窗中点击「允许」。"
+  echo "按回车开始申请磁盘文件夹权限…"
+
+  if [[ "${OCTRIX_PERMISSION_AUTO_CONFIRM:-0}" != "1" ]]; then
+    if [[ ! -t 1 || ! -e /dev/tty ]]; then
+      echo "当前不是交互式终端，暂未申请。稍后请运行：octrix permissions"
+      return 0
+    fi
+    if ! IFS= read -r </dev/tty; then
+      echo "未能读取终端确认。稍后请运行：octrix permissions"
+      return 0
+    fi
+  fi
+
+  local response granted
+  if ! response="$("$curl_bin" -sS -X POST "$base_url/api/system/permissions/files")"; then
+    echo "权限申请未完成。请确认 Octrix Host 正在运行后重试：octrix permissions" >&2
+    return 0
+  fi
+  granted="$(field "$response" ok)"
+  if [[ "$granted" == "true" ]]; then
+    mkdir -p "$host_base"
+    touch "$permission_marker"
+    echo "磁盘文件夹权限已确认，今后从 iPhone 创建会话时无需守在 Mac 前。"
+  else
+    echo "至少一个文件夹尚未允许访问。" >&2
+    echo "如果系统不再弹窗，请到「系统设置 > 隐私与安全性 > 文件与文件夹」为 node 开启权限，再运行：octrix permissions" >&2
+  fi
+}
+
+uninstall_service() {
+  "$launchctl_bin" bootout "$gui_domain" "$plist_path" >/dev/null 2>&1 || true
+  rm -f "$plist_path"
+  echo "Octrix Host 常驻服务已移除；程序文件和账号凭证仍保留。"
+}
+
+print_usage() {
+  echo "用法：octrix <命令>"
+  echo
+  echo "账号："
+  echo "  auth [--device-code]   登录 Octrix 账号"
+  echo "  logout                退出账号并断开云端连接"
+  echo "  status                查看 Host、账号与云端连接状态"
+  echo
+  echo "Host："
+  echo "  start                 启动后台 Host"
+  echo "  stop                  停止后台 Host"
+  echo "  restart               重启后台 Host"
+  echo "  webtui                打开本地 Web TUI"
+  echo "  logs                  查看 Host 日志"
+  echo "  permissions           申请文件夹访问权限"
+  echo
+  echo "维护："
+  echo "  install-service       注册常驻服务"
+  echo "  uninstall-service     移除常驻服务（保留程序与凭证）"
+  echo "  help                   显示此帮助"
+}
+
+command="${1:-status}"
+case "$command" in
+  install-service)
+    install_service
+    ;;
+  uninstall-service)
+    uninstall_service
+    ;;
+  start)
+    start_host
+    ;;
+  stop)
+    stop_host
+    ;;
+  restart)
+    restart_host
+    ;;
+  webtui)
+    ensure_running
+    "$open_bin" "$base_url"
+    ;;
+  logs)
+    mkdir -p "$log_dir"
+    touch "$log_dir/host.log"
+    tail -n "${OCTRIX_LOG_LINES:-100}" "$log_dir/host.log"
+    ;;
+  auth)
+    shift
+    ensure_running
+    login "${1:-}"
+    ;;
+  permissions)
+    request_file_permissions
+    ;;
+  status)
+    ensure_running
+    print_status_json "$(status_json)"
+    ;;
+  logout)
+    ensure_running
+    "$curl_bin" -fsS -X POST "$base_url/api/relay/logout" >/dev/null
+    echo "已退出 Octrix，云端连接已断开。"
+    ;;
+  help|-h|--help)
+    print_usage
+    ;;
+  *)
+    print_usage >&2
+    exit 2
+    ;;
+esac
