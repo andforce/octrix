@@ -4,19 +4,17 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./publish-release.sh [<version>] [build-target]
+  ./publish-release.sh <version> [build-target]
 
 Examples:
-  ./publish-release.sh
-  ./publish-release.sh 2026.07.16.18.10
-  ./publish-release.sh 2026.07.16.18.10 arm64
-  ./publish-release.sh 2026.07.16.18.10 x64
-  ./publish-release.sh 2026.07.16.18.10 both
+  ./publish-release.sh 1.0.3
+  ./publish-release.sh 1.0.3 arm64
+  ./publish-release.sh 1.0.3 x64
+  ./publish-release.sh 1.0.3 both
 
 Notes:
   - This is the default Host-only release path; it never builds or uploads a DMG
-  - Versions use the Asia/Shanghai timestamp format YYYY.MM.DD.HH.mm
-  - If version is omitted, the current Asia/Shanghai minute is used
+  - Version is required and must use MAJOR.MINOR.PATCH format
   - build-target defaults to "both"
   - The working tree must be clean before publishing
   - The script publishes Host archives and checksums to andforce/octrix
@@ -36,7 +34,7 @@ HOST_DIR="${SCRIPT_DIR}/release-host"
 RELEASE_VERSION_FILE="${SCRIPT_DIR}/RELEASE_VERSION"
 
 is_release_version() {
-  [[ "$1" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{2}$ ]]
+  node "${SCRIPT_DIR}/scripts/release-version.mjs" "$1"
 }
 
 is_build_target_token() {
@@ -50,31 +48,31 @@ is_build_target_token() {
   esac
 }
 
-VERSION=""
-BUILD_TARGET="both"
+if [[ $# -gt 2 ]]; then
+  echo "Too many arguments"
+  usage
+  exit 1
+fi
 
-if [[ -n "${1:-}" ]]; then
-  if is_release_version "$1"; then
-    VERSION="$1"
-    BUILD_TARGET="${2:-both}"
-  elif is_build_target_token "$1"; then
-    BUILD_TARGET="$1"
-  else
-    echo "Invalid first argument: expected YYYY.MM.DD.HH.mm or build-target, got: $1"
-    usage
-    exit 1
-  fi
+VERSION="${1:-}"
+BUILD_TARGET="${2:-both}"
+
+if [[ -z "${VERSION}" ]]; then
+  echo "Version is required and must use MAJOR.MINOR.PATCH format"
+  usage
+  exit 1
+fi
+
+if ! is_release_version "${VERSION}"; then
+  echo "Invalid version: expected MAJOR.MINOR.PATCH, got: ${VERSION}"
+  usage
+  exit 1
 fi
 
 if ! is_build_target_token "${BUILD_TARGET}"; then
   echo "Invalid build-target: ${BUILD_TARGET}"
   usage
   exit 1
-fi
-
-if [[ -z "${VERSION}" ]]; then
-  VERSION="$(TZ=Asia/Shanghai date '+%Y.%m.%d.%H.%M')"
-  echo "==> No version argument: using ${VERSION} (Asia/Shanghai)"
 fi
 
 if ! command -v gh >/dev/null 2>&1; then

@@ -47,9 +47,11 @@ npm run dev
 
 ```bash
 cd client/web
-./publish-release.sh
+./publish-release.sh 1.0.3 both
 ```
 
 产物为 `Octrix-Host-arm64.tar.gz`、`Octrix-Host-x64.tar.gz` 及对应的 `.sha256`。包内同时包含后端、本地 Web TUI、Node 运行时和 `octrix` CLI；脚本会校验 Web TUI、CLI、版本清单和文件摘要后再上传。
+
+发布版本必须显式使用 `MAJOR.MINOR.PATCH` 三段式格式，例如 `1.0.3`；不再自动生成时间戳版本。
 
 macOS 原生 App、Tauri/Electron 与 DMG 当前暂停适配、测试和发布。相关源码、签名配置及 `publish-macos-release.sh` 只作为明确的备用路径保留，不属于默认发布流程。

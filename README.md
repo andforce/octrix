@@ -215,8 +215,10 @@ curl http://127.0.0.1:9800/api/relay/status
 
 ```bash
 cd client/web
-./publish-release.sh
+./publish-release.sh 1.0.3 both
 ```
+
+Host 版本必须显式使用 `MAJOR.MINOR.PATCH` 三段式格式；`both` 会同时生成 Apple Silicon 与 Intel 安装包。
 
 macOS 原生 App、Tauri/Electron 与 DMG 当前暂停维护。历史源码和明确命名的 `client/web/publish-macos-release.sh` 仅作为未来恢复适配时的备用入口，日常发布不得调用。
 

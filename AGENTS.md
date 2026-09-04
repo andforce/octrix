@@ -118,7 +118,8 @@ TypeScript 使用 ES modules、单引号、分号和 2 空格缩进；跨模块�
 
 - 只要执行 App Store 或 TestFlight 发布、提审、上传、分发相关操作，必须优先使用仓库已提供的 ASC Skills，不要绕过既有 ASC 工作流随意改用手工网页步骤或其他未约定工具。
 - 每次发布完成后，必须立即同步更新仓库内对应的版本号，并将该版本号变更单独确认后提交，再 `push` 到 GitHub，避免已发布产物与仓库版本记录脱节。
-- 版本号规则统一改为 `YYYY.MM.DD.HH.mm`，按年、月、日、时、分五段生成，例如 `2026.07.09.11.12`。如需填写 `MARKETING_VERSION`、构建展示版本或其他人工维护版本字段，优先使用这一格式。
+- App Store、TestFlight 与 macOS App 版本继续使用 `YYYY.MM.DD.HH.mm`，按年、月、日、时、分五段生成，例如 `2026.07.09.11.12`。如需填写 `MARKETING_VERSION`、构建展示版本或其他人工维护版本字段，优先使用这一格式。
+- Octrix Host-only Release 必须使用 `MAJOR.MINOR.PATCH` 三段式版本，例如 `1.0.3`。
 
 ## Commit 与 Pull Request 规范
 
