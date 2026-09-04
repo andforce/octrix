@@ -1,4 +1,16 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  CheckCircle,
+  Circle,
+  CloudCheck,
+  LockKey,
+  PaperPlaneRight,
+  Plus,
+  ShieldCheck,
+  TerminalWindow,
+  LinkSimple,
+} from '@phosphor-icons/react';
 import { createRoot } from 'react-dom/client';
 import { ApiError, api, formatDeviceCode, jsonBody, normalizeDeviceCode, safeNext } from './api';
 import './styles.css';
@@ -101,35 +113,36 @@ export function Landing() {
   return <Shell>
     <main className="landing">
       <section className="hero">
-        <div className="hero-content">
-          <div className="context-label"><span className="live-dot" /> Mac 在线，工作就在线</div>
-          <h1>把你的 Mac<br /><span>带进 iPhone。</span></h1>
-          <p>Octrix 把 iPhone 变成 Mac 上 AI Agent 的安全入口。离开电脑后，继续发消息、看进度、接收结果。</p>
-          <div className="hero-actions">
-            <a className="button primary" href="/start">3 分钟开始使用</a>
-            <a className="button secondary" href="/login">登录并授权</a>
+        <div className="hero-intro">
+          <div className="hero-content">
+            <div className="context-label"><span className="live-dot" /> Mac 在线，工作就在线</div>
+            <h1>离开 Mac，<span>工作不用停。</span></h1>
+            <p>Octrix 把 iPhone 变成 Mac 上 AI Agent 的安全入口。离开电脑后，继续发消息、看进度、接收结果。</p>
           </div>
-          <ul className="hero-facts" aria-label="产品特点">
-            <li>无需公网 IP</li>
-            <li>同账号自动发现</li>
-            <li>随时撤销设备</li>
-          </ul>
+          <div className="hero-conversion">
+            <p>在任何地方，通过 iPhone 与 Mac 上的 Agent 无缝对话。通信经 Octrix Cloud 加密中继，安全、私密、可控。</p>
+            <div className="hero-actions">
+              <a className="button primary" href="/start">3 分钟开始使用 <ArrowRight size={17} weight="bold" /></a>
+              <a className="button secondary" href="/login">登录并授权</a>
+            </div>
+          </div>
         </div>
 
         <ProductConnectionPreview />
       </section>
 
-      <section className="product-story" id="product">
-        <div className="story-heading">
-          <p>一个账号，连接你自己的设备</p>
-          <h2>不是远程桌面。<br />是把对话接着做完。</h2>
+      <section className="quick-start" id="product">
+        <div className="quick-start-heading">
+          <p className="context-label">首次连接</p>
+          <h2>3 分钟，让第一台 Mac 上线。</h2>
+          <p>无需复杂网络配置。安装 Host、登录同一账号，iPhone 即可发现并连接你的 Mac。</p>
         </div>
-        <ol className="journey" aria-label="Octrix 使用流程">
-          <li><span>1</span><div><h3>Host 在 Mac 常驻</h3><p>Octrix Host 在后台连接你的 Agent、会话与工作目录；无需保持桌面窗口打开。</p></div></li>
-          <li><span>2</span><div><h3>账号完成授权</h3><p>Mac 与 iPhone 登录同一个账号，Octrix Cloud 自动建立设备关系。</p></div></li>
-          <li><span>3</span><div><h3>iPhone 接续工作</h3><p>打开会话，发出下一条消息；结果仍由你的 Mac 生成。</p></div></li>
+        <ol className="quick-start-steps" aria-label="Octrix 使用流程">
+          <li><strong>01</strong><div><h3>安装 Host</h3><p>在 Mac 安装 Octrix Host。</p></div></li>
+          <li><strong>02</strong><div><h3>登录同一账号</h3><p>Mac 与 iPhone 使用同一账号。</p></div></li>
+          <li><strong>03</strong><div><h3>iPhone 授权连接</h3><p>发现你的 Mac，授权后继续对话。</p></div></li>
         </ol>
-        <a className="text-link" href="/start">查看完整安装与授权步骤 <span aria-hidden>→</span></a>
+        <a className="button primary quick-start-action" href="/start">开始安装 <ArrowRight size={17} weight="bold" /></a>
       </section>
 
       <section className="agent-focus" aria-labelledby="agent-focus-title">
@@ -152,7 +165,7 @@ export function Landing() {
                     <span><strong>{cli.name}</strong><small>{cli.description}</small></span>
                   </th>
                   <td><code>{cli.command}</code></td>
-                  <td><span className="availability"><i />已开放</span></td>
+                  <td><span className="availability"><CheckCircle size={15} weight="fill" />已开放</span></td>
                 </tr>
               ))}
             </tbody>
@@ -170,7 +183,7 @@ export function Landing() {
           <div className="sample-bar"><span>Studio Mac</span><small><i className="online-dot" /> 在线</small></div>
           <div className="sample-message user">检查刚才的改动，跑完测试后告诉我结果。</div>
           <div className="sample-message agent"><b>Codex CLI</b><p>测试全部通过。我还发现授权空状态缺少下一步入口，已经一起补上。</p></div>
-          <div className="sample-input">继续优化首次使用流程 <span>↑</span></div>
+          <div className="sample-input">继续优化首次使用流程 <PaperPlaneRight size={17} weight="fill" /></div>
         </div>
       </section>
 
@@ -183,25 +196,67 @@ export function Landing() {
         </div>
       </section>
 
-      <section className="cta"><p>约 3 分钟完成首次连接</p><h2>先让一台 Mac 上线。</h2><div><a className="button light" href="/start">开始安装</a><a className="button dark-button" href="/dashboard">管理我的设备</a></div></section>
+      <section className="cta"><p>约 3 分钟完成首次连接</p><h2>先让一台 Mac 上线。</h2><div><a className="button light" href="/start">开始安装 <ArrowRight size={17} weight="bold" /></a><a className="button dark-button" href="/dashboard">管理我的设备</a></div></section>
     </main>
   </Shell>;
 }
 
 function ProductConnectionPreview() {
   return <div className="connection-preview" aria-label="Mac 通过 Octrix Cloud 与 iPhone 同步会话">
-    <div className="mac-window">
-      <div className="window-bar"><span /><span /><span /><b>Octrix · Studio Mac</b></div>
-      <div className="mac-body">
-        <aside><strong>会话</strong><span className="selected">发布前检查</span><span>重构设置页</span><span>用户反馈</span></aside>
-        <div className="mac-chat"><small>Codex CLI · 在线</small><h3>发布前检查</h3><div>已经完成账号设备同步，并通过模拟器构建。</div><div className="reply">把安装引导也补齐。</div></div>
+    <ol className="connection-steps" aria-label="跨设备连接流程">
+      <li><span>1</span><div><strong>Mac Host 在线</strong><small>你的 Agent 正在运行</small></div><ArrowRight aria-hidden size={20} weight="bold" /></li>
+      <li><span>2</span><div><strong>Octrix Cloud 中继</strong><small>端到端加密传输</small></div><ArrowRight aria-hidden size={20} weight="bold" /></li>
+      <li><span>3</span><div><strong>iPhone 继续对话</strong><small>离开电脑也不中断</small></div></li>
+    </ol>
+
+    <div className="connection-stage">
+      <div className="mac-window">
+        <div className="window-bar">
+          <span className="window-dots" aria-hidden><Circle size={9} weight="fill" /><Circle size={9} weight="fill" /><Circle size={9} weight="fill" /></span>
+          <b>Octrix · Studio Mac</b>
+        </div>
+        <div className="mac-body">
+          <aside><strong>会话</strong><span className="selected">发布前检查</span><span>重构设置页</span><span>用户反馈</span><span>数据分析</span></aside>
+          <div className="mac-chat">
+            <div className="mac-chat-title"><div><h3>发布前检查</h3><small><Circle size={8} weight="fill" /> Agent 在线</small></div><span>正在检查风险点与回归影响…</span></div>
+            <div className="progress-row"><span /><b>68%</b></div>
+            <div className="activity-log"><strong>最新日志</strong><p><time>10:21</time> 扫描变更文件 23/23</p><p><time>10:21</time> 分析影响范围</p><p><time>10:22</time> 生成检查报告</p></div>
+            <a href="/#product" className="report-link">查看检查报告（3 项）<ArrowRight size={14} weight="bold" /></a>
+          </div>
+        </div>
+        <div className="mac-status"><span><Plus size={15} weight="bold" /> 新建会话</span><small><Circle size={8} weight="fill" /> Host 已连接</small></div>
+      </div>
+
+      <div className="relay-column">
+        <div className="relay-lock"><LockKey size={28} weight="regular" /></div>
+        <h3>Octrix Cloud 中继服务</h3>
+        <p>端到端加密 · 私有协议 · 不存储内容</p>
+        <ul>
+          <li><LinkSimple size={17} /><span><strong>建立连接</strong><small>设备认证通过</small></span></li>
+          <li><ShieldCheck size={17} /><span><strong>加密通道</strong><small>TLS + 私有协议</small></span></li>
+          <li><CloudCheck size={17} /><span><strong>消息中继</strong><small>实时转发</small></span></li>
+        </ul>
+      </div>
+
+      <div className="phone-window">
+        <div className="phone-status"><time>9:41</time><span>•••</span></div>
+        <div className="phone-nav"><span>‹</span><small>Studio Mac · 在线</small><b>•••</b></div>
+        <div className="phone-content">
+          <h3>发布前检查</h3>
+          <div className="connection-note"><span><Circle size={8} weight="fill" /> 已连接</span><small>会话已同步，随时可在 iPhone 继续。</small></div>
+          <div className="phone-message user"><b>你 <time>10:21</time></b><p>帮我检查一下这次发布的风险点</p></div>
+          <div className="phone-message agent"><b><Circle size={8} weight="fill" /> Codex CLI <time>10:22</time></b><p>已完成依赖与配置检查，发现 3 个潜在问题。</p><a href="/#product">查看检查报告（3 项）<ArrowRight size={13} weight="bold" /></a></div>
+          <div className="phone-composer"><Plus size={15} /><span>继续与 Codex CLI 对话…</span><PaperPlaneRight size={15} weight="fill" /></div>
+        </div>
       </div>
     </div>
-    <div className="cloud-link"><i /><span>Octrix Cloud</span><small>同账号 · 已加密</small></div>
-    <div className="phone-window">
-      <div className="phone-island" />
-      <div className="phone-content"><small>Studio Mac · 在线</small><h3>发布前检查</h3><div>已经完成账号设备同步，并通过模拟器构建。</div><p>把安装引导也补齐。</p><span>消息已送达 Mac</span></div>
-    </div>
+
+    <ul className="connection-proof" aria-label="Octrix 连接特性">
+      <li><ShieldCheck size={22} /><span><strong>无需公网 IP</strong><small>设备主动出连，不暴露服务</small></span></li>
+      <li><LinkSimple size={22} /><span><strong>同账号设备发现</strong><small>自动发现，可控可撤销</small></span></li>
+      <li><LockKey size={22} /><span><strong>端到端加密中继</strong><small>不存储内容，全程加密传输</small></span></li>
+      <li><TerminalWindow size={22} /><span><strong>支持 {SUPPORTED_CLIS.length} 种 Agent CLI</strong><small>灵活接入你的工具链</small></span></li>
+    </ul>
   </div>;
 }
 
