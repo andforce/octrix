@@ -80,6 +80,14 @@ describe('Octrix Cloud 网站', () => {
     expect(screen.getByRole('heading', { name: '从安装 Host，到第一条回复。' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: '安装 Octrix Host' })).toBeTruthy();
     await screen.findByText(/relay\.example\.com\/install-host\.sh/);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    fireEvent.click(screen.getByRole('button', { name: '复制安装命令' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(
+      "curl -fsSL 'https://relay.example.com/install-host.sh' | OCTRIX_CLOUD_URL='https://relay.example.com' bash",
+    ));
+    expect(screen.getByRole('button', { name: '安装命令已复制' })).toBeTruthy();
+    expect(screen.getByText('已复制')).toBeTruthy();
     expect(apiMock).toHaveBeenCalledWith('/api/v1/auth/methods');
     expect(screen.getByText(/首次安装会提示按回车申请/)).toBeTruthy();
     expect(screen.getByText(/127\.0\.0\.1:39800/)).toBeTruthy();

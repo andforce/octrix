@@ -227,8 +227,13 @@ footer a:hover { color: var(--coral); }
 .step-copy details { max-width: 53ch; margin-top: 22px; color: var(--ink-soft); font-size: 13px; line-height: 1.7; }
 .step-copy summary, .guide-help summary { color: var(--ink); font-weight: 800; cursor: pointer; }
 .step-copy details p { margin: 10px 0 0; }
-.host-install-command { max-width: 650px; margin: 22px 0; padding: 16px 18px; overflow-x: auto; border: 1px solid #31415c; border-radius: 9px; background: #0b1220; color: #f8fafc; box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
-.host-install-command code { display: block; padding: 0; border-radius: 0; background: transparent; color: #f8fafc; font-size: 14px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
+.host-install-command { display: flex; align-items: stretch; max-width: 650px; margin: 22px 0; overflow: hidden; border: 1px solid #31415c; border-radius: 9px; background: #0b1220; color: #f8fafc; box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.host-install-command code { display: block; min-width: 0; flex: 1; padding: 16px 18px; overflow-x: auto; border-radius: 0; background: transparent; color: #f8fafc; font-size: 14px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
+.copy-install-command { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; min-width: 82px; margin: 7px; padding: 0 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 7px; background: var(--night-soft); color: #f8fafc; font-size: 12px; font-weight: 800; transition: background .18s ease, border-color .18s ease, color .18s ease; }
+.copy-install-command:hover:not(:disabled) { border-color: rgba(89,214,190,.62); background: #243149; }
+.copy-install-command[data-state='copied'] { border-color: rgba(89,214,190,.5); background: #123b36; color: #9cebdc; }
+.copy-install-command[data-state='error'] { border-color: rgba(239,101,76,.58); color: #ffb4a6; }
+.copy-install-command:disabled { cursor: wait; opacity: .52; }
 code { padding: 1px 5px; border-radius: 4px; background: #e7ebf1; color: #1d293a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .91em; }
 .check-list { display: grid; gap: 9px; margin: 22px 0 0; padding: 0; color: var(--ink-soft); font-size: 14px; list-style: none; }
 .check-list li { display: flex; gap: 10px; align-items: center; }
