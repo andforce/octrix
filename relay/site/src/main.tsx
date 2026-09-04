@@ -1,9 +1,11 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
+  Check,
   CheckCircle,
   Circle,
   CloudCheck,
+  CopySimple,
   LockKey,
   PaperPlaneRight,
   Plus,
@@ -263,12 +265,30 @@ function ProductConnectionPreview() {
 export function GettingStarted() {
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
   const [publicUrlError, setPublicUrlError] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const installCommand = publicUrl ? hostInstallCommand(publicUrl) : null;
 
   useEffect(() => {
     void api<AuthMethods>('/api/v1/auth/methods')
       .then(methods => setPublicUrl(methods.public_url))
       .catch(() => setPublicUrlError(true));
   }, []);
+
+  useEffect(() => {
+    if (copyState !== 'copied') return;
+    const timeout = window.setTimeout(() => setCopyState('idle'), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [copyState]);
+
+  async function copyInstallCommand() {
+    if (!installCommand) return;
+    try {
+      await navigator.clipboard.writeText(installCommand);
+      setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+  }
 
   return <Shell>
     <main className="guide">
@@ -282,7 +302,20 @@ export function GettingStarted() {
         <li id="mac">
           <span className="step-number">1</span>
           <div className="step-copy"><p>准备 Mac</p><h2>安装 Octrix Host</h2><p>打开 Mac 的“终端”，粘贴下面一行。安装器会自动选择芯片版本，并把 Host 注册为登录后常驻服务。</p>
-            <div className="host-install-command"><code>{publicUrl ? hostInstallCommand(publicUrl) : publicUrlError ? '无法读取服务器配置，请稍后刷新页面。' : '正在读取服务器配置…'}</code></div>
+            <div className="host-install-command">
+              <code>{installCommand ?? (publicUrlError ? '无法读取服务器配置，请稍后刷新页面。' : '正在读取服务器配置…')}</code>
+              <button
+                type="button"
+                className="copy-install-command"
+                data-state={copyState}
+                disabled={!installCommand}
+                aria-label={copyState === 'copied' ? '安装命令已复制' : copyState === 'error' ? '重新复制安装命令' : '复制安装命令'}
+                onClick={() => void copyInstallCommand()}
+              >
+                {copyState === 'copied' ? <Check size={16} weight="bold" /> : <CopySimple size={16} weight="bold" />}
+                <span aria-live="polite">{copyState === 'copied' ? '已复制' : copyState === 'error' ? '重试' : '复制'}</span>
+              </button>
+            </div>
             <p>首次安装会提示按回车申请“桌面、文稿和下载”访问权限；请在随后出现的 macOS 弹窗中逐项点“允许”，以后从 iPhone 远程选择工作目录就不需要守在 Mac 前。</p>
             <p>Host 包含 AI 进程管理、Octrix Cloud 连接和完整 Web 终端 TUI。安装完成后运行 <code>octrix webtui</code>，即可在浏览器打开 <code>http://127.0.0.1:39800/</code>，继续和 AI 交流。</p>
             <p>本地 Web TUI 只监听这台 Mac 的本机地址，浏览器关闭后 Host 与 AI 进程仍会继续运行。</p>
