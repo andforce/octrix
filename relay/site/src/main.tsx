@@ -98,17 +98,18 @@ function Shell({ children, compact = false }: { children: ReactNode; compact?: b
   </div>;
 }
 
+// 图片复制自 client/web/public/logos/，对应关系沿用客户端 agent-platforms.ts。
 const SUPPORTED_CLIS = [
-  { name: 'Codex CLI', command: 'codex', description: 'OpenAI 的命令行编码 Agent' },
-  { name: 'OpenClaude', command: 'openclaude', description: 'Claude Code 兼容 CLI' },
-  { name: 'Claude Code', command: 'claude', description: 'Anthropic 官方命令行编码 Agent' },
-  { name: 'OpenCode', command: 'opencode', description: '开放式终端编码 Agent' },
-  { name: 'GitHub Copilot CLI', command: 'copilot', description: 'GitHub Copilot 的命令行 Agent' },
-  { name: 'Gemini CLI', command: 'gemini', description: 'Gemini 的命令行 Agent' },
-  { name: 'Cursor CLI', command: 'agent', description: 'Cursor 的命令行编码 Agent' },
-  { name: 'Kiro CLI', command: 'kiro-cli', description: 'Kiro 的命令行编码 Agent' },
-  { name: 'Qoder CLI', command: 'qodercli', description: 'Qoder 的命令行编码 Agent' },
-  { name: 'CodeBuddy', command: 'codebuddy', description: 'CodeBuddy 的命令行编码 Agent' },
+  { name: 'Codex CLI', command: 'codex', description: 'OpenAI 的命令行编码 Agent', logo: '/logos/openai-codex-cli.jpg' },
+  { name: 'OpenClaude', command: 'openclaude', description: 'Claude Code 兼容 CLI', logo: '/logos/claude-code.png' },
+  { name: 'Claude Code', command: 'claude', description: 'Anthropic 官方命令行编码 Agent', logo: '/logos/claude-code.png' },
+  { name: 'OpenCode', command: 'opencode', description: '开放式终端编码 Agent', logo: '/logos/opencode.svg' },
+  { name: 'GitHub Copilot CLI', command: 'copilot', description: 'GitHub Copilot 的命令行 Agent', logo: '/logos/github-copilot-cli.svg' },
+  { name: 'Gemini CLI', command: 'gemini', description: 'Gemini 的命令行 Agent', logo: '/logos/gemini-cli.png' },
+  { name: 'Cursor CLI', command: 'agent', description: 'Cursor 的命令行编码 Agent', logo: '/logos/cursor-cli.png' },
+  { name: 'Kiro CLI', command: 'kiro-cli', description: 'Kiro 的命令行编码 Agent', logo: '/logos/kiro-cli.svg' },
+  { name: 'Qoder CLI', command: 'qodercli', description: 'Qoder 的命令行编码 Agent', logo: '/logos/qoder-cli.png' },
+  { name: 'CodeBuddy', command: 'codebuddy', description: 'CodeBuddy 的命令行编码 Agent', logo: '/logos/codebuddy-cli.svg' },
 ] as const;
 
 export function Landing() {
@@ -160,10 +161,10 @@ export function Landing() {
               <tr><th scope="col">Agent CLI</th><th scope="col">本地命令</th><th scope="col">状态</th></tr>
             </thead>
             <tbody>
-              {SUPPORTED_CLIS.map((cli, index) => (
+              {SUPPORTED_CLIS.map(cli => (
                 <tr key={cli.name}>
                   <th scope="row">
-                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <img className="agent-logo" src={cli.logo} alt="" width={28} height={28} loading="lazy" />
                     <span><strong>{cli.name}</strong><small>{cli.description}</small></span>
                   </th>
                   <td><code>{cli.command}</code></td>
