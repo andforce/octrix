@@ -4,6 +4,21 @@
 
 ## 本地运行
 
+开发网站推荐使用一键启动脚本（macOS / Ubuntu，需要 Node.js >= 22.12、npm 和 curl）：
+
+```bash
+cd site
+./run-dev.sh
+```
+
+脚本可从任意工作目录调用，会检查运行时、自动安装缺失或不匹配的依赖，并启动网站 `http://127.0.0.1:5174` 与后端 `http://127.0.0.1:8790`。前后端修改后自动重载，按 `Ctrl+C` 同时停止。端口已被占用时会报错，不会结束已有进程。
+
+默认检查 PATH 中的 Node 和 `~/.n/bin/node`，也可用 `NODE_BIN=/绝对路径/node ./run-dev.sh` 指定运行时。服务始终使用经过版本检查的同一个 Node。
+
+开发数据库和随机生成的 token pepper 保存在被 Git 忽略的 `site/.local-dev/`，重启后继续使用。可通过环境变量提供 `OCTRIX_DATABASE_URL`、`OCTRIX_TOKEN_PEPPER` 和登录服务配置；脚本固定使用本机地址，不会自动加载生产 `.env`。未配置登录服务时可浏览官网，登录功能不可用。
+
+如需在本地运行构建后的完整服务，在 `relay/` 下执行：
+
 ```bash
 npm install
 npm --prefix site install
