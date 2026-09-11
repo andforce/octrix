@@ -4,6 +4,14 @@
 
 OctrixAI 让你从 iPhone 安全连接本人 Mac 上的 AI CLI，会话和任务由常驻的 Octrix Host 管理，并通过 Octrix Cloud 在已授权设备之间同步。
 
+## 用户微信群
+
+欢迎微信扫码加入 Octrix 用户交流群，交流使用体验、反馈问题和讨论功能建议。
+
+<p align="center">
+  <img src="docs/images/wechat-user-group.jpeg" alt="Octrix 用户微信群二维码" width="360" />
+</p>
+
 ## 使用官方服务快速开始
 
 不需要自行部署服务器，使用官方 [Octrix Cloud](https://octrix.work) 即可。完整网页引导见 [octrix.work/start](https://octrix.work/start)，通常约 3 分钟完成。
