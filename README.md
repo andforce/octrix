@@ -1,5 +1,7 @@
 # OctrixAI
 
+**[在 App Store 下载 Octrix](https://apps.apple.com/cn/app/octrix/id6786918049)**
+
 OctrixAI 让你从 iPhone 安全连接本人 Mac 上的 AI CLI，会话和任务由常驻的 Octrix Host 管理，并通过 Octrix Cloud 在已授权设备之间同步。
 
 ## 使用官方服务快速开始
