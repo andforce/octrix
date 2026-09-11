@@ -3,12 +3,10 @@ import {
   ArrowRight,
   Check,
   CheckCircle,
-  Circle,
   CloudCheck,
   CopySimple,
   LockKey,
   PaperPlaneRight,
-  Plus,
   ShieldCheck,
   TerminalWindow,
   LinkSimple,
@@ -213,22 +211,21 @@ function ProductConnectionPreview() {
     </ol>
 
     <div className="connection-stage">
-      <div className="mac-window">
-        <div className="window-bar">
-          <span className="window-dots" aria-hidden><Circle size={9} weight="fill" /><Circle size={9} weight="fill" /><Circle size={9} weight="fill" /></span>
-          <b>Octrix · Studio Mac</b>
-        </div>
-        <div className="mac-body">
-          <aside><strong>会话</strong><span className="selected">发布前检查</span><span>重构设置页</span><span>用户反馈</span><span>数据分析</span></aside>
-          <div className="mac-chat">
-            <div className="mac-chat-title"><div><h3>发布前检查</h3><small><Circle size={8} weight="fill" /> Agent 在线</small></div><span>正在检查风险点与回归影响…</span></div>
-            <div className="progress-row"><span /><b>68%</b></div>
-            <div className="activity-log"><strong>最新日志</strong><p><time>10:21</time> 扫描变更文件 23/23</p><p><time>10:21</time> 分析影响范围</p><p><time>10:22</time> 生成检查报告</p></div>
-            <a href="/#product" className="report-link">查看检查报告（3 项）<ArrowRight size={14} weight="bold" /></a>
-          </div>
-        </div>
-        <div className="mac-status"><span><Plus size={15} weight="bold" /> 新建会话</span><small><Circle size={8} weight="fill" /> Host 已连接</small></div>
-      </div>
+      <figure className="mac-product">
+        <img
+          className="mac-product-image"
+          src="/macbook-web-tui.webp"
+          alt="MacBook 屏幕中展示 Octrix 的 Mac Web TUI，包含会话列表、AI 对话和工作空间"
+          width={1536}
+          height={1024}
+          decoding="async"
+        />
+        <figcaption>
+          <strong>Mac 上的 Web TUI</strong>
+          <p>在浏览器管理会话，与本机 AI 对话。</p>
+          <a href="/client_web.webp" target="_blank" rel="noreferrer">查看真实界面 <ArrowRight size={13} weight="bold" /></a>
+        </figcaption>
+      </figure>
 
       <div className="relay-column">
         <div className="relay-lock"><LockKey size={28} weight="regular" /></div>
@@ -241,17 +238,21 @@ function ProductConnectionPreview() {
         </ul>
       </div>
 
-      <div className="phone-window">
-        <div className="phone-status"><time>9:41</time><span>•••</span></div>
-        <div className="phone-nav"><span>‹</span><small>Studio Mac · 在线</small><b>•••</b></div>
-        <div className="phone-content">
-          <h3>发布前检查</h3>
-          <div className="connection-note"><span><Circle size={8} weight="fill" /> 已连接</span><small>会话已同步，随时可在 iPhone 继续。</small></div>
-          <div className="phone-message user"><b>你 <time>10:21</time></b><p>帮我检查一下这次发布的风险点</p></div>
-          <div className="phone-message agent"><b><Circle size={8} weight="fill" /> Codex CLI <time>10:22</time></b><p>已完成依赖与配置检查，发现 3 个潜在问题。</p><a href="/#product">查看检查报告（3 项）<ArrowRight size={13} weight="bold" /></a></div>
-          <div className="phone-composer"><Plus size={15} /><span>继续与 Codex CLI 对话…</span><PaperPlaneRight size={15} weight="fill" /></div>
-        </div>
-      </div>
+      <figure className="phone-product">
+        <img
+          className="phone-product-image"
+          src="/iphone-ios.webp"
+          alt="iPhone 屏幕中展示 Octrix iOS 客户端，与 Mac 上的 Codex CLI 对话并查看回复"
+          width={887}
+          height={1774}
+          decoding="async"
+        />
+        <figcaption>
+          <strong>iPhone 上的 Octrix</strong>
+          <p>离开 Mac，继续对话、查看结果。</p>
+          <a href="/client_ios.webp" target="_blank" rel="noreferrer">查看真实界面 <ArrowRight size={13} weight="bold" /></a>
+        </figcaption>
+      </figure>
     </div>
 
     <ul className="connection-proof" aria-label="Octrix 连接特性">

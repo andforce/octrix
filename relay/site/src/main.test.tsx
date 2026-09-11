@@ -19,7 +19,7 @@ afterEach(() => {
 describe('Octrix Cloud 网站', () => {
   it('公开首页说明 Mac—Cloud—iPhone 工作方式和安全边界', () => {
     render(<Landing />);
-    expect(screen.getByText('离开 Mac，', { exact: false })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /离开 Mac，/ })).toBeTruthy();
     expect(screen.getByText('工作不用停。')).toBeTruthy();
     expect(screen.getByRole('list', { name: '跨设备连接流程' })).toBeTruthy();
     expect(screen.getAllByText('Octrix Cloud').length).toBeGreaterThan(0);
